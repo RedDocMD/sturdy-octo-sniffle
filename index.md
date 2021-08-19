@@ -25,3 +25,9 @@ Without [D105821](https://reviews.llvm.org/D105821), this used to have **no** le
 ### Model comparision methods of `std::unique_ptr`
 
 [D104616](https://reviews.llvm.org/D104616) introduces modelling of comparision operator overloads of `std::unique_ptr`. It leverages the `SValBuilder::evalBinOp` to evaluate the result of the operator. More importantly, it attempts to perform a **state-split** if it is possible.
+
+### Model `std::swap` specialization for `std::unique_ptr`
+
+[D104300](https://reviews.llvm.org/D104300) models the `std::swap` specialization for `std::unique_ptr`. There is an existing `swap` method on `std::unique_ptr`, which performs roughly the same thing. Thus, the common code is refactored out and both methods are handled exactly the same way.
+
+![std-swap](assets/std-swap.png)
