@@ -40,3 +40,11 @@ Without [D105821](https://reviews.llvm.org/D105821), this used to have **no** le
 ### Model `std::make_unique` and cousins
 
 [D103750](https://reviews.llvm.org/D103750) models the quintessential `std::make_unique` function. In this entire checker, we only account for `unique_ptr` containing pointers, not arrays - we do the same here as well. The crux of this patch is informing the CSA that we are constructing an object via this function. Ideally this should be handled automatically (as it is for constructors). But here we bail out and simply call `ExprEngine::updateObjectsUnderConstruction`. Also we ensure that the `ProgramState` knows that we have a non-null inner pointer in the `unique_ptr`.
+
+### Fix for faulty namespace test and add flag checking
+
+[D106296](https://reviews.llvm.org/D106296) prevents a crash we encountered by handling the case where we do not have the declaration of a function and so cannot know its namespace. Also we add the `ModelSmartPtrDereference` flag check to the previously modelled functions.
+
+### Add option to `SATest.py` for extra checkers
+
+[D106739](https://reviews.llvm.org/D106739) augments the functionality of the `SATest.py` script. This script runs the CSA on the projects in the `clang/utils/analyzer/projects` directory (via a Docker image). By default, the script runs the CSA with only default checkers enabled. This patch adds a flag to enable extra checkers (for our case, the `SmartPtrChecker`), enabling us to conveniently run test our patches.
