@@ -11,7 +11,7 @@ This project aims to complete the `SmartPtrChecker` and thus `SmartPtrModeling` 
 One aim of this project was to make sure that no method defined on `std::unique_ptr` is left un-modelled. If we don't, CSA either does:
 
 - *Conservative evaluation*, which leads to loss of information and possibly warnings being suppressed
-- *Inlining*, which sometimes leads the CSA to falsely believe that there is a bug in the standard library code (because we have modelled parts of it and are inlining other parts). Since bugs in standard library code are normally suppressed, this leads to other bugs beings suppresed (false-negatives). For example:
+- *Inlining*, which sometimes leads the CSA to falsely believe that there is a bug in the standard library code (because we have modelled parts of it and are inlining other parts). Since bugs in standard library code are normally suppressed, this leads to other bugs beings suppressed (false-negatives). For example:
 
 ```cpp
 void foo() {
@@ -118,10 +118,19 @@ int bar(std::unique_ptr<int> Q) {
     return *Q; // warning: null dereference
 }
 ```
-The problem is that `foo(Q)` creates a state split. But CSA uses the state split in `foo` to conclude in `bar()` that there exists a path in which `Q` is null and there is a dereference. We need to make sure that state-splits in other functions don't lead to misleading diagonistics.
+The problem is that `foo(Q)` creates a state split. But CSA uses the state split in `foo` to conclude in `bar()` that there exists a path in which `Q` is null and there is a dereference. We need to make sure that state-splits in other functions don't lead to misleading diagnostics.
 
 - **Polish and commit [D105821](https://reviews.llvm.org/D105821)**: This patch has become too bulky and probably needs to be split into two at least (one part for the destructor and the other part for the pointer escape). Also they need *tests*!
 
 - **Enable the checker by default**: Once the previous two tasks are done and the remaining bugs uncovered by WebKit fixed, we can make it a default checker. 😃
 
 - **Model `std::shared_ptr` and `std::weak_ptr`**: These two can be modelled in a manner similar to `std::unique_ptr`, ie, with the `TrackedRegionMap`. In addition, these smart pointers need a *ref count* to be stored in the GDM. A discussion on how to do this can be found in my GSoC [proposal](https://docs.google.com/document/d/1DlU7Whg33qAp3wHBdAcGvl8VE2gfslaGBc-GRb_CNjk/edit?usp=sharing).
+
+## Running the code
+
+To run the CSA with `SmartPtrChecker` enabled:
+```shell
+<path-to-scan-build> -o . -enable-checker alpha.cplusplus.SmartPtr -analyzer-config cplusplus.SmartPtrModeling:ModelSmartPtrDereference=true clang++ -c <filename>
+```
+
+## Acknowledgement
