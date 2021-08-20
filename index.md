@@ -103,3 +103,25 @@ We have two sources of test projects to run:- [projects](https://github.com/llvm
 - On running with and without the patches of this project, about **250** false memory leaks warnings were removed. As for null-dereference warnings, **6** were removed and **6** added. The ones removed is a question for further investigation.
 
 - On running with `SmartPtrChecker` enabled and disabled, about **90** null smart pointer dereference warnings are emitted (including 3 out the 4 mentioned in previous year's report, the fourth was not emitted due to the code being removed). *There are still some false positives*. These will be areas to look at before declaring that we have a stable checker.
+
+## Future Work
+
+- **Inlined defensive checks**: This is a class of false-positives with a really misleading note.
+
+```cpp
+void foo(std::unique_ptr<int> &P) {
+    if (P) {}
+}
+
+int bar(std::unique_ptr<int> Q) {
+    foo(Q);
+    return *Q; // warning: null dereference
+}
+```
+The problem is that `foo(Q)` creates a state split. But CSA uses the state split in `foo` to conclude in `bar()` that there exists a path in which `Q` is null and there is a dereference. We need to make sure that state-splits in other functions don't lead to misleading diagonistics.
+
+- **Polish and commit [D105821](https://reviews.llvm.org/D105821)**: This patch has become too bulky and probably needs to be split into two at least (one part for the destructor and the other part for the pointer escape). Also they need *tests*!
+
+- **Enable the checker by default**: Once the previous two tasks are done and the remaining bugs uncovered by WebKit fixed, we can make it a default checker. 😃
+
+- **Model `std::shared_ptr` and `std::weak_ptr`**: These two can be modelled in a manner similar to `std::unique_ptr`, ie, with the `TrackedRegionMap`. In addition, these smart pointers need a *ref count* to be stored in the GDM. A discussion on how to do this can be found in my GSoC [proposal](https://docs.google.com/document/d/1DlU7Whg33qAp3wHBdAcGvl8VE2gfslaGBc-GRb_CNjk/edit?usp=sharing).
