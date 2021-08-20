@@ -84,3 +84,22 @@ void foo() {
 In this code, `LameVector` contains an inner pointer, which is freed in its destructor. If we do not invalidate this inner pointer, CSA will think `LameVector` and hence `ptr` leaks memory.
 
 This is a stop gap measure and it seems to work for the time being. The proper solution is to inline both the member constructor (both during constructor calls and during `make_unique`) and the member destructor. But we don't yet have a mechanism to "evaluate" functions from a checker.
+
+## Results
+
+We have two sources of test projects to run:- [projects](https://github.com/llvm/llvm-project/tree/main/clang/utils/analyzer/projects) in the `clang/utils/analyzer/projects` directory and [Webkit](https://github.com/WebKit/WebKit). We evaluated checker performance by:
+
+- Running scan-build with and without the patches from this project
+- Running scan-build with `SmartPtrChecker` enabled and disabled
+
+### Projects in `clang/utils/analyzer/projects`
+
+- On running with and without the patches of this project, **no warnings were added or removed**. This is somewhat expected since the main false warnings expected to be fixed are from the `MallocChecker`. This effect is cancelled by the suppressed error detected during inlining of `std::unique_ptr` destructor.
+
+- On running with `SmartPtrChecker` enabled and disabled, **some warnings were added, many were removed**. The warnings removed were almost all false memory-leak warnings due to the lack of modelling. (`drogon`, `fmt`, `re2`, `faiss`). `oatpp` had some "C++ move semantics"  warnings removed, because `std::unique_ptr` or `srd::shared_ptr` is perfectly usable and valid after a move. Some warnings were added to `duckdb`, `drogon` and `re2`, all due to custom "smart pointers" in the codebase.
+
+### Webkit
+
+- On running with and without the patches of this project, about **250** false memory leaks warnings were removed. As for null-dereference warnings, **6** were removed and **6** added. The ones removed is a question for further investigation.
+
+- On running with `SmartPtrChecker` enabled and disabled, about **90** null smart pointer dereference warnings are emitted (including 3 out the 4 mentioned in previous year's report, the fourth was not emitted due to the code being removed). *There are still some false positives*. These will be areas to look at before declaring that we have a stable checker.
