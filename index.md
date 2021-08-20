@@ -1,4 +1,9 @@
-# Making Smart Pointer Checkers default checkers in the Static Analyzer
+<h1 style="text-align: center">Making Smart Pointer Checkers default checkers in the Static Analyzer</h1>
+
+<h2 style="text-align: center; color: #a2a6ab">Final Report: Google Summer of Code 2021</h2>
+
+<h4 style="text-align: center">Deep Majumder</h4>
+<h4 style="text-align: center">deep.majumder2019@gmail.com</h4>
 
 ## Overview 
 This project aims to complete the `SmartPtrChecker` and thus `SmartPtrModeling` checkers to detect null-dereferences of the `std::unique_ptr`. This is a continuation of the GSoC 2020 [project](https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit) in the same area.
@@ -104,6 +109,8 @@ We have two sources of test projects to run:- [projects](https://github.com/llvm
 
 - On running with `SmartPtrChecker` enabled and disabled, about **90** null smart pointer dereference warnings are emitted (including 3 out the 4 mentioned in previous year's report, the fourth was not emitted due to the code being removed). *There are still some false positives*. These will be areas to look at before declaring that we have a stable checker.
 
+![WebkitBug](assets/new-webkit.png)
+
 ## Future Work
 
 - **Inlined defensive checks**: This is a class of false-positives with a really misleading note.
@@ -134,3 +141,5 @@ To run the CSA with `SmartPtrChecker` enabled:
 ```
 
 ## Acknowledgement
+
+I would like to express my sincere gratitude towards my four mentors - **Artem Dergachev**, **Valeriy Savchenko**, **Gábor Horváth** and **Raphael Isemann**. They helped me tirelessly throughout the GSoC period, quickly responding to my emails, reviewing my patches and giving advice. They were available for long hours of Skype calls, at often awkward times for them (due to time zone differences). It was a fun three months of learning, coding, struggling, hacking and doing something, perhaps, meaningful.
