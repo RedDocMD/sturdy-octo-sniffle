@@ -37,14 +37,50 @@ Without [D105821](https://reviews.llvm.org/D105821), this used to have **no** le
 
 [D105421](https://reviews.llvm.org/D105421) models the `<<` operator specialization for `std::unique_ptr`. There is not that much modelling required for this method, other than invalidating the stream region.
 
+
 ### Model `std::make_unique` and cousins
 
 [D103750](https://reviews.llvm.org/D103750) models the quintessential `std::make_unique` function. In this entire checker, we only account for `unique_ptr` containing pointers, not arrays - we do the same here as well. The crux of this patch is informing the CSA that we are constructing an object via this function. Ideally this should be handled automatically (as it is for constructors). But here we bail out and simply call `ExprEngine::updateObjectsUnderConstruction`. Also we ensure that the `ProgramState` knows that we have a non-null inner pointer in the `unique_ptr`.
+
 
 ### Fix for faulty namespace test and add flag checking
 
 [D106296](https://reviews.llvm.org/D106296) prevents a crash we encountered by handling the case where we do not have the declaration of a function and so cannot know its namespace. Also we add the `ModelSmartPtrDereference` flag check to the previously modelled functions.
 
+
 ### Add option to `SATest.py` for extra checkers
 
 [D106739](https://reviews.llvm.org/D106739) augments the functionality of the `SATest.py` script. This script runs the CSA on the projects in the `clang/utils/analyzer/projects` directory (via a Docker image). By default, the script runs the CSA with only default checkers enabled. This patch adds a flag to enable extra checkers (for our case, the `SmartPtrChecker`), enabling us to conveniently run test our patches.
+
+
+### Model destructor for `std::unique_ptr`
+
+[D105821](https://reviews.llvm.org/D105821) models the elephant in the room - the destructor for `std::unique_ptr`. Although we are just modelling the destructor in this patch, in reality, we have ended up calling the `MallocChecker` and improving the invalidation scheme in addition to the modelling. We are doing the following steps:
+
+- Enable calling `evalCall` for destructor-calls (before this patch, only the `defaultEvalCall` is run)
+- Escape inner pointer on construction and reset
+- Escape all reachable symbols in `checkRegionChange`
+- *Invalidate* the inner pointer and remove it from `TrackedRegionMap` (in both destructor and in reset)
+
+The fuss about *invalidation* of inner pointer stems from the fact that `delete` also calls the *member destructor* (if it exists). Consider the following class:
+
+```cpp
+class LameVector {
+    size_t sz = 0;
+    size_t cap = 4;
+    size_t el_sz = 1;
+    unsigned char *buf;
+
+public:
+    LameVector() : buf{new unsigned char[cap]} {}
+    ~LameVector() { delete[] buf; }
+};
+
+void foo() {
+    auto ptr = std::make_unique<LameVector>();
+}
+```
+
+In this code, `LameVector` contains an inner pointer, which is freed in its destructor. If we do not invalidate this inner pointer, CSA will think `LameVector` and hence `ptr` leaks memory.
+
+This is a stop gap measure and it seems to work for the time being. The proper solution is to inline both the member constructor (both during constructor calls and during `make_unique`) and the member destructor. But we don't yet have a mechanism to "evaluate" functions from a checker.
