@@ -11,8 +11,6 @@
 <link rel=manifest href=/sturdy-octo-sniffle/manifest.json>
 <link rel=icon href=/sturdy-octo-sniffle/favicon.png type=image/x-icon>
 <link rel=stylesheet href=/sturdy-octo-sniffle/book.min.8599444fcc48ee6b435b5b62c955ab7d914fa1e2a453df90c4b97cc9769665d1.css integrity="sha256-hZlET8xI7mtDW1tiyVWrfZFPoeKkU9+QxLl8yXaWZdE=" crossorigin=anonymous>
-<script defer src=/sturdy-octo-sniffle/flexsearch.min.js></script>
-<script defer src=/sturdy-octo-sniffle/en.search.min.ac3f1309a4acad4dadd71a0814f1c0c7b867fd81513161bb6ee37493b0fa11dc.js integrity="sha256-rD8TCaSsrU2t1xoIFPHAx7hn/YFRMWG7buN0k7D6Edw=" crossorigin=anonymous></script>
 </head>
 <body dir=ltr>
 <input type=checkbox class="hidden toggle" id=menu-control>
@@ -25,17 +23,12 @@
 <a class="flex align-center" href=/sturdy-octo-sniffle/><span>Google Summer of Code 2021</span>
 </a>
 </h2>
-<div class=book-search>
-<input type=text id=book-search-input placeholder=Search aria-label=Search maxlength=64 data-hotkeys=s/>
-<div class="book-search-spinner hidden"></div>
-<ul id=book-search-results></ul>
-</div>
 <ul>
 <li>
-<a href=https://reddocmd.github.io/sturdy-octo-sniffle/docs/report/>Final Report</a>
+<a href=https://reddocmd.github.io/sturdy-octo-sniffle/docs/proposal/ class=active>Proposal</a>
 </li>
 <li>
-<a href=https://reddocmd.github.io/sturdy-octo-sniffle/docs/proposal/ class=active>Proposal</a>
+<a href=https://reddocmd.github.io/sturdy-octo-sniffle/docs/report/>Final Report</a>
 </li>
 </ul>
 </nav>
@@ -63,9 +56,16 @@
 <ul>
 <li><a href=#rename-the-checkers>Rename the checkers</a></li>
 <li><a href=#methods-of-stdunique_ptr-not-covered-yet>Methods of <code>std::unique_ptr</code> not covered yet</a></li>
+<li><a href=#todos-and-fixmes-in-smartptrmodelling>TODO’s and FIXME’s in <code>SmartPtrModelling</code></a></li>
+<li><a href=#investigate-into-false-positives>Investigate into false positives</a></li>
+<li><a href=#about-shared_ptr-and-weak_ptr>About <code>shared_ptr</code> and <code>weak_ptr</code></a></li>
+<li><a href=#solution-track-the-raw-pointer-and-ref-count-that>Solution: Track the raw pointer and ref count that</a></li>
+<li><a href=#alternate-solution-remember-a-chain-of-memregions>Alternate solution: Remember a chain of MemRegion’s</a></li>
+<li><a href=#null-stdweak_ptr>Null <code>std::weak_ptr</code></a></li>
 </ul>
 </li>
-<li><a href=#todos-and-fixmes-in-smartptrmodelling>TODO’s and FIXME’s in <code>SmartPtrModelling</code></a></li>
+<li><a href=#estimated-timeline>Estimated Timeline</a></li>
+<li><a href=#bio>Bio</a></li>
 </ul>
 </nav>
 </aside>
@@ -162,10 +162,10 @@ Methods of <code>std::unique_ptr</code> not covered yet
 <li>comparison operators</li>
 </ul>
 <p>I intend to complete all of these. These will build on the existing methods in <code>SmartPtrModelling</code>.</p>
-<h2 id=todos-and-fixmes-in-smartptrmodelling>
+<h3 id=todos-and-fixmes-in-smartptrmodelling>
 TODO’s and FIXME’s in <code>SmartPtrModelling</code>
 <a class=anchor href=#todos-and-fixmes-in-smartptrmodelling>#</a>
-</h2>
+</h3>
 <p>The following table is a list of such flags (as of now) in <code>SmartPtrModelling.cpp</code>:</p>
 <table>
 <thead>
@@ -181,7 +181,7 @@ TODO’s and FIXME’s in <code>SmartPtrModelling</code>
 <td style=text-align:center>1</td>
 <td style=text-align:center>170</td>
 <td style=text-align:center>TODO</td>
-<td style=text-align:left>Update CallDescription to support anonymous calls</td>
+<td style=text-align:left>Update CallDescription to support anonymous calls?</td>
 </tr>
 <tr>
 <td style=text-align:center>2</td>
@@ -205,7 +205,7 @@ TODO’s and FIXME’s in <code>SmartPtrModelling</code>
 <td style=text-align:center>5</td>
 <td style=text-align:center>202</td>
 <td style=text-align:center>TODO</td>
-<td style=text-align:left>Add a note to bug reports describing this decision.</td>
+<td style=text-align:left>Add a note to bug re| ports describing this decision.</td>
 </tr>
 <tr>
 <td style=text-align:center>6</td>
@@ -228,6 +228,247 @@ TODO’s and FIXME’s in <code>SmartPtrModelling</code>
 </tbody>
 </table>
 <p>I am currently working on item <strong>7</strong> (<a href=https://reviews.llvm.org/D98726>D98726</a>) and item <strong>8</strong> (<a href=https://reviews.llvm.org/D97183>D97183</a>) of the above table. Not all of these TODO’s are problematic and some of them are enhancements rather than potential corners. I would prioritize removing the most important ones first.</p>
+<h3 id=investigate-into-false-positives>
+Investigate into false positives
+<a class=anchor href=#investigate-into-false-positives>#</a>
+</h3>
+<p>There are no documented false positives according to this <a href="https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit#heading=h.5mykosj4yack">report</a>. That said, there is an issue with “inlined defensive checking”. So, to be certain, I intend to run Static Analyzer on some more open-source projects. It has already been tested on LLVM code and WebKit. These can be run again, as well as on Chromium and Firefox codebases, or maybe some more others. There should be no false positives and in fact some doubtful bugs are suppressed to avoid creating false positives.</p>
+<p><em>At this point, we should be able to move the checker of <code>std::unique_ptr</code> to default from alpha.</em></p>
+<h3 id=about-shared_ptr-and-weak_ptr>
+About <code>shared_ptr</code> and <code>weak_ptr</code>
+<a class=anchor href=#about-shared_ptr-and-weak_ptr>#</a>
+</h3>
+<p>The following table compares the methods of <code>std::unique_ptr</code> and <code>std::shared_ptr</code> (✓ indicates done, ⨯ indicates not applicable/modellable, blank indicates TODO):</p>
+<table>
+<thead>
+<tr>
+<th style=text-align:left>Method</th>
+<th style=text-align:center><code>std::unique_ptr</code></th>
+<th style=text-align:center><code>std::shared_ptr</code></th>
+<th style=text-align:left>Remarks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style=text-align:left>Construct from pointer</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Similar for both</td>
+</tr>
+<tr>
+<td style=text-align:left>Copy constructor</td>
+<td style=text-align:center>⨯</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Increases ref-count</td>
+</tr>
+<tr>
+<td style=text-align:left>Move constructor</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Similar for both</td>
+</tr>
+<tr>
+<td style=text-align:left>Destructor</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Decreases ref-count</td>
+</tr>
+<tr>
+<td style=text-align:left>Copy operator</td>
+<td style=text-align:center>⨯</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Increases ref-count</td>
+</tr>
+<tr>
+<td style=text-align:left>Move operator</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Similar for both</td>
+</tr>
+<tr>
+<td style=text-align:left>Release</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center>⨯</td>
+<td style=text-align:left></td>
+</tr>
+<tr>
+<td style=text-align:left>Reset</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Resets the current <code>shared_ptr</code>, reduces ref-count of the original one (if present)</td>
+</tr>
+<tr>
+<td style=text-align:left>Swap</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Similar for both</td>
+</tr>
+<tr>
+<td style=text-align:left>Get</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Similar for both</td>
+</tr>
+<tr>
+<td style=text-align:left>operator bool</td>
+<td style=text-align:center>✓</td>
+<td style=text-align:center></td>
+<td style=text-align:left>Similar for both</td>
+</tr>
+</tbody>
+</table>
+<p>Associated with a <code>shared_ptr</code> are three “things”:</p>
+<ul>
+<li>The shared pointer object</li>
+<li>The inner raw pointer</li>
+<li>The ref-count</li>
+</ul>
+<p>For determining whether a <code>shared_ptr</code> is null or not, we do not need the ref-count.</p>
+<p>However, <code>std::weak_ptr</code> introduces a new problem with omitting the reference count. Consider the following code:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>A</span> {
+  <span style=color:#66d9ef>int</span> field;
+  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>foo</span>() { std<span style=color:#f92672>::</span>cout <span style=color:#f92672>&lt;&lt;</span> <span style=color:#e6db74>&#34;Field: &#34;</span> <span style=color:#f92672>&lt;&lt;</span> field <span style=color:#f92672>&lt;&lt;</span> std<span style=color:#f92672>::</span>endl; }
+  A(<span style=color:#66d9ef>int</span> f <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>) <span style=color:#f92672>:</span> field{f} {}
+};
+
+<span style=color:#66d9ef>void</span> <span style=color:#a6e22e>mess</span>() {
+  std<span style=color:#f92672>::</span>weak_ptr<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span> A_Weak;
+  {
+	std<span style=color:#f92672>::</span>shared_ptr<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span> A_Shared <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>make_shared<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span>(<span style=color:#ae81ff>100</span>);
+	{
+  	   std<span style=color:#f92672>::</span>shared_ptr<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span> A_Copied <span style=color:#f92672>=</span> A_Shared;
+  	   A_Weak <span style=color:#f92672>=</span> A_Copied;
+	}
+	A_Weak.lock()<span style=color:#f92672>-&gt;</span>foo(); <span style=color:#75715e>// Should work
+</span><span style=color:#75715e></span>  }
+  A_Weak.lock()<span style=color:#f92672>-&gt;</span>foo(); <span style=color:#75715e>// Should crash
+</span><span style=color:#75715e></span>}
+</code></pre></div><p>If we don’t remember the ref-count, then we cannot tell that a crash is going to happen in the second deref but not in the first one. This is because <code>weak_ptr</code> is non-owning and doesn’t prevent the deallocation of the underlying pointer (that is we can have a dangling <code>weak_ptr</code>).</p>
+<h3 id=solution-track-the-raw-pointer-and-ref-count-that>
+Solution: Track the raw pointer and ref count that
+<a class=anchor href=#solution-track-the-raw-pointer-and-ref-count-that>#</a>
+</h3>
+<p>Both <code>shared_ptr</code> and <code>weak_ptr</code> have an underlying raw pointer (as I highlighted before). We can track that raw pointer in the GDM by a map. We can also track the ref-count in the GDM by mapping from the raw pointer to the ref-count. Thus. we have a <em><strong>UnderlyingPointerMap</strong></em>, which maps from MemRegion (which corresponds to the this pointer) to an SVal (the symbolic value for the inner raw pointer). Also, we have a <em><strong>ReferenceCountMap</strong></em>, which maps from the SVal to an int, the ref-count.</p>
+<p>Thus, on construction of <code>shared_ptr</code>, one of the two things happens:</p>
+<ul>
+<li>When a <code>shared_ptr</code> is constructed from pointer or is move constructed (from <code>unique_ptr</code> or <code>shared_ptr</code>), or from <code>make_shared</code> - Add an entry to <em>UnderlyingPointerMap</em> and to <em>ReferenceCounterMap</em> (with key as 1). [If the raw pointer being used already exists in the map then we actually have a bug here, since we will have a double free on <code>shared_ptr </code>destruction].</li>
+<li>When a <code>shared_ptr</code> is copy-constructed, an entry to the <em>UnderlyingPointerMap</em> is made, with the value being the SVal that the original shared_ptr pointed to. Also increase the ref-count in <em>ReferenceCountMap</em></li>
+</ul>
+<p>On destruction of <code>shared_ptr</code>, we must remove the entry from <em>UnderlyingPointerMap</em> and either decrement the count in <em>ReferenceCounterMap</em> or remove the entry if it reaches 0.
+The other methods will also be similarly modelled.</p>
+<h3 id=alternate-solution-remember-a-chain-of-memregions>
+Alternate solution: Remember a chain of MemRegion’s
+<a class=anchor href=#alternate-solution-remember-a-chain-of-memregions>#</a>
+</h3>
+<p>The approach is the same as that used with <code>unique_ptr</code> - store in the Generic Data Map (GDM) a map, <em><strong>SharedRegionMap</strong></em>, which maps from <code>MemRegion</code> (corresponding to the this pointer) to an <code>SVal</code> (the symbolic value for the inner raw pointer). If the <code>SVal</code> is a zero-constant or has been constrained to null at the point of dereference, we know we are doing a null-dereference.</p>
+<p>Apart from the <em>SharedRegionMap</em>, let us have two more maps:</p>
+<ul>
+<li><em><strong>OriginRegionMap</strong></em> - maps from <code>MemRegion</code> to <code>MemRegion</code>, where the key <code>MemRegion</code> is constructed/copied from the value <code>MemRegion</code></li>
+<li><em><strong>ReferenceCountMap</strong></em> - maps from <code>MemRegion</code> to int, which stores the ref-count of the <code>shared_ptr</code> whose this pointer corresponds to the key <code>MemRegion</code></li>
+</ul>
+<p>Thus, on construction of <code>shared_ptr</code>, one of the two things happens:</p>
+<ul>
+<li>When a <code>shared_ptr</code> is constructed from pointer or is move constructed - a new entry is made in <em>SharedRegionMap</em> and in <em>ReferenceCountMap</em></li>
+<li>When a <code>shared_ptr</code> is copy constructed - an entry is made in <em>OriginRegionMap</em>. Also, the chain of MemRegions are followed until one is found which has an entry in <em>ReferenceCountMap</em> (and consequently in <em>SharedRegionMap</em>). Then the reference count is incremented.</li>
+</ul>
+<p>Similar steps must be taken for other methods/functions.</p>
+<p>The following pseudocode describes how to access the <code>SVal</code> corresponding to a <code>shared_ptr</code>:</p>
+<pre><code>mr := MemRegion corresponding to this
+found := false
+while true:
+	if mr is in SharedRegionMap:
+        // Bingo! We found the SVal 
+    	   return SharedRegionMap.get(mr)
+	else:
+         // Look at the next MemRegion in the chain
+    	    next_mr = OriginRegionMap.get(mr)
+    	    if next_mr is null:
+              // We are out of MemRegions to look for           
+              break
+    	    else:
+        mr = next_mr
+// Conjure a new SVal and update the necessary maps
+</code></pre><p>Thus we can find out if a <code>shared_ptr</code> is null or not (by accessing the <code>SVal</code>) and also find out the ref-count.</p>
+<h3 id=null-stdweak_ptr>
+Null <code>std::weak_ptr</code>
+<a class=anchor href=#null-stdweak_ptr>#</a>
+</h3>
+<p>A <code>weak_ptr</code> can be null when:</p>
+<ul>
+<li>The <code>shared_ptr</code> it corresponds to is null</li>
+<li>The <code>shared_ptr</code> it points to has reached a ref_count of 0</li>
+</ul>
+<p>Both the cases can be obtained from the information stored for the <code>shared_ptr</code> in the GDM.
+To store the correspondence between <code>weak_ptr</code> and the underlying <code>shared_ptr</code>, we need another map in the GDM, <em><strong>WeakPtrRegionMap</strong></em>. It maps from <code>MemRegion</code> of <code>weak_ptr</code> to <code>MemRegion</code> of <code>shared_ptr</code>.</p>
+<h2 id=estimated-timeline>
+Estimated Timeline
+<a class=anchor href=#estimated-timeline>#</a>
+</h2>
+<p>My exams (and semester) ends by mid-April and so I am basically free after that. I would like to continue working on plugging TODO’s in <code>SmartPtrModelling</code>. This would give me a good picture of how the checker exactly works and also about bug-reports and visitors (it has already come up in <a href=https://reviews.llvm.org/D97183>D97183</a>).
+The rest of it is detailed in the following table. I probably have set the timelines and targets ambitiously. But I think it is a good idea to keep myself under a hard target to be more productive.</p>
+<table>
+<thead>
+<tr>
+<th style=text-align:left>Time</th>
+<th style=text-align:left>Task</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style=text-align:left>Till May 17</td>
+<td style=text-align:left>Complete currently open reviews</td>
+</tr>
+<tr>
+<td style=text-align:left>May 17 - June 7 (Community bonding period)</td>
+<td style=text-align:left>Cover methods of std::unique_ptr that have not been covered.</td>
+</tr>
+<tr>
+<td style=text-align:left>June 7 - June 30</td>
+<td style=text-align:left>Cover all the FIXME’s and the critical TODO’s from Table 1</td>
+</tr>
+<tr>
+<td style=text-align:left>July 1 - July 7</td>
+<td style=text-align:left>Rename checkers. Iron out bugs from the previous two stages if any.</td>
+</tr>
+<tr>
+<td style=text-align:left>July 8 - July 15</td>
+<td style=text-align:left>Run with new checkers on some large code-bases. Remove any false positives at this stage (there probably won’t be any)</td>
+</tr>
+<tr>
+<td style=text-align:left>July 16 - July 31</td>
+<td style=text-align:left>Come up with the first draft of shared_ptr modelling (constructor and destructor handling, some of the methods) - should be able to handle simple and obvious bugs. Mark others as TODO.</td>
+</tr>
+<tr>
+<td style=text-align:left>August 1 - August 15</td>
+<td style=text-align:left>Handle weak_ptr. It should correctly use the data of the underlying shared_ptr to find dereference bugs. Ample test cases must be provided.</td>
+</tr>
+<tr>
+<td style=text-align:left>August 16 - August 23</td>
+<td style=text-align:left>Write final report, finish up (I am not keeping plans of code here)</td>
+</tr>
+</tbody>
+</table>
+<h2 id=bio>
+Bio
+<a class=anchor href=#bio>#</a>
+</h2>
+<p>I am a sophomore majoring in Computer Science and Engineering from Indian Institute of Technology, Kharagpur. I got interested in compilers when I learnt Rust - a language that eliminated almost all of memory errors by statically enforcing lifetimes - such is the power of a well written compiler. I learnt about compilers from the MIT OCW course <a href=https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-035-computer-language-engineering-spring-2010/>6.035</a> and the book “Engineering a Compiler; Cooper, Keith; Torczon, Linda; 2nd Edition”. I wrote a simple non-optimizing compiler for the educational language Decaf. (Code on <a href=https://github.com/RedDocMD/DecafCompiler>Github</a>). Subsequently,
+I learnt about the LLVM project. I was already using Clang as my C/C++ compiler, but from a few YouTube talks, I learnt about all the other amazing things that you can do with the Clang AST/CFG (libtooling in general). That’s when I decided that I wanted to learn more about the Clang project. This is how I came to learn about the Static Analyzer project and became a complete fan of it, because it can find some of those annoying memory bugs (among others) that had already been shot down by the Rust compiler for Rust (admittedly the model is quite different and the aims are different as well, but it is still exciting that so much can be done on C++ with the right compiler tooling).</p>
+<p>I began working on small patches regarding the Static Analyzer this year and began communicating on cfe-dev and llvm-dev. It was a true learning experience, especially from the critical feedback I received on Phabricator. I was really delighted by the frequency and quality of feedback that I received and that gave me confidence to try for a GSoC project on the Clang Static Analyzer.</p>
+<p>Of course, even after this project, I would still like to keep working on the Static Analyzer and perhaps even other parts of LLVM as my knowledge of computers, architectures, operating systems and compilers increases.</p>
+<p>Here is my Github <a href=https://github.com/RedDocMD>profile</a>.</p>
+<p>Here is my Phabricator <a href=https://reviews.llvm.org/p/RedDocMD/>profile</a>.</p>
+<p>The following patches have landed:</p>
+<ul>
+<li><a href=https://reviews.llvm.org/D95846>D95846: Updated comments to reflect D85817</a></li>
+<li><a href=https://reviews.llvm.org/D95877>D95877: Fix static_cast on pointer-to-member handling</a></li>
+</ul>
+<p>The following patches are in progress:</p>
+<ul>
+<li><a href=https://reviews.llvm.org/D98726>D98726: Enabling MallocChecker to take up after SmartPtrModelling</a></li>
+<li><a href=https://reviews.llvm.org/D96976>D96976: Fix reinterpret_cast handling for pointer-to-member</a></li>
+<li><a href=https://reviews.llvm.org/D97183>D97183: Add NoteTag for smart-ptr get()</a></li>
+</ul>
 </article>
 <footer class=book-footer>
 <div class="flex flex-wrap justify-between">
@@ -249,9 +490,16 @@ TODO’s and FIXME’s in <code>SmartPtrModelling</code>
 <ul>
 <li><a href=#rename-the-checkers>Rename the checkers</a></li>
 <li><a href=#methods-of-stdunique_ptr-not-covered-yet>Methods of <code>std::unique_ptr</code> not covered yet</a></li>
+<li><a href=#todos-and-fixmes-in-smartptrmodelling>TODO’s and FIXME’s in <code>SmartPtrModelling</code></a></li>
+<li><a href=#investigate-into-false-positives>Investigate into false positives</a></li>
+<li><a href=#about-shared_ptr-and-weak_ptr>About <code>shared_ptr</code> and <code>weak_ptr</code></a></li>
+<li><a href=#solution-track-the-raw-pointer-and-ref-count-that>Solution: Track the raw pointer and ref count that</a></li>
+<li><a href=#alternate-solution-remember-a-chain-of-memregions>Alternate solution: Remember a chain of MemRegion’s</a></li>
+<li><a href=#null-stdweak_ptr>Null <code>std::weak_ptr</code></a></li>
 </ul>
 </li>
-<li><a href=#todos-and-fixmes-in-smartptrmodelling>TODO’s and FIXME’s in <code>SmartPtrModelling</code></a></li>
+<li><a href=#estimated-timeline>Estimated Timeline</a></li>
+<li><a href=#bio>Bio</a></li>
 </ul>
 </nav>
 </div>
