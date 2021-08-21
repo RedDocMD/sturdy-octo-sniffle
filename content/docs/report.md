@@ -1,7 +1,12 @@
 ---
 title: "Final Report"
-date: 2021-08-21T10:45:00+05:30
-draft: false
+weight: 1
+# bookFlatSection: false
+# bookToc: true
+# bookHidden: false
+# bookCollapseSection: false
+# bookComments: false
+# bookSearchExclude: false
 ---
 
 # Making Smart Pointer Checkers default checkers in the Static Analyzer
