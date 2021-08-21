@@ -178,8 +178,54 @@ Both `shared_ptr` and `weak_ptr` have an underlying raw pointer (as I highlighte
 Thus, on construction of `shared_ptr`, one of the two things happens:
 
 - When a `shared_ptr` is constructed from pointer or is move constructed (from `unique_ptr` or `shared_ptr`), or from `make_shared` - Add an entry to *UnderlyingPointerMap* and to *ReferenceCounterMap* (with key as 1). [If the raw pointer being used already exists in the map then we actually have a bug here, since we will have a double free on `shared_ptr `destruction].
-
 - When a `shared_ptr` is copy-constructed, an entry to the *UnderlyingPointerMap* is made, with the value being the SVal that the original shared_ptr pointed to. Also increase the ref-count in *ReferenceCountMap*
 
 On destruction of `shared_ptr`, we must remove the entry from *UnderlyingPointerMap* and either decrement the count in *ReferenceCounterMap* or remove the entry if it reaches 0.
 The other methods will also be similarly modelled.
+
+### Alternate solution: Remember a chain of MemRegion’s
+
+The approach is the same as that used with `unique_ptr` - store in the Generic Data Map (GDM) a map, ***SharedRegionMap***, which maps from `MemRegion` (corresponding to the this pointer) to an `SVal` (the symbolic value for the inner raw pointer). If the `SVal` is a zero-constant or has been constrained to null at the point of dereference, we know we are doing a null-dereference.
+
+Apart from the *SharedRegionMap*, let us have two more maps:
+
+- ***OriginRegionMap*** - maps from `MemRegion` to `MemRegion`, where the key `MemRegion` is constructed/copied from the value `MemRegion`
+- ***ReferenceCountMap*** - maps from `MemRegion` to int, which stores the ref-count of the `shared_ptr` whose this pointer corresponds to the key `MemRegion`
+
+Thus, on construction of `shared_ptr`, one of the two things happens:
+
+- When a `shared_ptr` is constructed from pointer or is move constructed - a new entry is made in *SharedRegionMap* and in *ReferenceCountMap*
+- When a `shared_ptr` is copy constructed - an entry is made in *OriginRegionMap*. Also, the chain of MemRegions are followed until one is found which has an entry in *ReferenceCountMap* (and consequently in *SharedRegionMap*). Then the reference count is incremented.
+
+Similar steps must be taken for other methods/functions.
+
+The following pseudocode describes how to access the `SVal` corresponding to a `shared_ptr`:
+
+```
+mr := MemRegion corresponding to this
+found := false
+while true:
+	if mr is in SharedRegionMap:
+        // Bingo! We found the SVal 
+    	   return SharedRegionMap.get(mr)
+	else:
+         // Look at the next MemRegion in the chain
+    	    next_mr = OriginRegionMap.get(mr)
+    	    if next_mr is null:
+              // We are out of MemRegions to look for           
+              break
+    	    else:
+        mr = next_mr
+// Conjure a new SVal and update the necessary maps
+```
+Thus we can find out if a `shared_ptr` is null or not (by accessing the `SVal`) and also find out the ref-count.
+
+### Null `std::weak_ptr`
+
+A `weak_ptr` can be null when:
+
+- The `shared_ptr` it corresponds to is null
+- The `shared_ptr` it points to has reached a ref_count of 0
+
+Both the cases can be obtained from the information stored for the `shared_ptr` in the GDM.
+To store the correspondence between `weak_ptr` and the underlying `shared_ptr`, we need another map in the GDM, ***WeakPtrRegionMap***. It maps from `MemRegion` of `weak_ptr` to `MemRegion` of `shared_ptr`.
