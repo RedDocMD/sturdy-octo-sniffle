@@ -1,0 +1,261 @@
+<!doctype html><html lang=en dir=ltr>
+<head>
+<meta charset=utf-8>
+<meta name=viewport content="width=device-width,initial-scale=1">
+<meta name=description content="Proposal for &ldquo;Making Smart Pointer Checkers default checkers in the Static Analyzer&rdquo; #  Information #   Name: Deep Majumder Email: deep.majumder2019@gmail.com  Problem Statement #  The Clang Static Analyzer contains a SmartPtrChecker for catching null smart pointer dereference bugs. The data it uses to figure out such cases comes from the SmartPtrModelling checker, which models how a smart pointer behaves. This way, the Static Analyzer can find these bugs without accessing the source code for C++ standard library smart pointers.">
+<meta name=theme-color content="#FFFFFF"><meta property="og:title" content="Proposal">
+<meta property="og:description" content="Proposal for &ldquo;Making Smart Pointer Checkers default checkers in the Static Analyzer&rdquo; #  Information #   Name: Deep Majumder Email: deep.majumder2019@gmail.com  Problem Statement #  The Clang Static Analyzer contains a SmartPtrChecker for catching null smart pointer dereference bugs. The data it uses to figure out such cases comes from the SmartPtrModelling checker, which models how a smart pointer behaves. This way, the Static Analyzer can find these bugs without accessing the source code for C++ standard library smart pointers.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://reddocmd.github.io/sturdy-octo-sniffle/docs/proposal/"><meta property="article:section" content="docs">
+<title>Proposal | Google Summer of Code 2021</title>
+<link rel=manifest href=/sturdy-octo-sniffle/manifest.json>
+<link rel=icon href=/sturdy-octo-sniffle/favicon.png type=image/x-icon>
+<link rel=stylesheet href=/sturdy-octo-sniffle/book.min.8599444fcc48ee6b435b5b62c955ab7d914fa1e2a453df90c4b97cc9769665d1.css integrity="sha256-hZlET8xI7mtDW1tiyVWrfZFPoeKkU9+QxLl8yXaWZdE=" crossorigin=anonymous>
+<script defer src=/sturdy-octo-sniffle/flexsearch.min.js></script>
+<script defer src=/sturdy-octo-sniffle/en.search.min.ac3f1309a4acad4dadd71a0814f1c0c7b867fd81513161bb6ee37493b0fa11dc.js integrity="sha256-rD8TCaSsrU2t1xoIFPHAx7hn/YFRMWG7buN0k7D6Edw=" crossorigin=anonymous></script>
+</head>
+<body dir=ltr>
+<input type=checkbox class="hidden toggle" id=menu-control>
+<input type=checkbox class="hidden toggle" id=toc-control>
+<main class="container flex">
+<aside class=book-menu>
+<div class=book-menu-content>
+<nav>
+<h2 class=book-brand>
+<a class="flex align-center" href=/sturdy-octo-sniffle/><span>Google Summer of Code 2021</span>
+</a>
+</h2>
+<div class=book-search>
+<input type=text id=book-search-input placeholder=Search aria-label=Search maxlength=64 data-hotkeys=s/>
+<div class="book-search-spinner hidden"></div>
+<ul id=book-search-results></ul>
+</div>
+<ul>
+<li>
+<a href=https://reddocmd.github.io/sturdy-octo-sniffle/docs/report/>Final Report</a>
+</li>
+<li>
+<a href=https://reddocmd.github.io/sturdy-octo-sniffle/docs/proposal/ class=active>Proposal</a>
+</li>
+</ul>
+</nav>
+<script>(function(){var a=document.querySelector("aside .book-menu-content");addEventListener("beforeunload",function(b){localStorage.setItem("menu.scrollTop",a.scrollTop)}),a.scrollTop=localStorage.getItem("menu.scrollTop")})()</script>
+</div>
+</aside>
+<div class=book-page>
+<header class=book-header>
+<div class="flex align-center justify-between">
+<label for=menu-control>
+<img src=/sturdy-octo-sniffle/svg/menu.svg class=book-icon alt=Menu>
+</label>
+<strong>Proposal</strong>
+<label for=toc-control>
+<img src=/sturdy-octo-sniffle/svg/toc.svg class=book-icon alt="Table of Contents">
+</label>
+</div>
+<aside class="hidden clearfix">
+<nav id=TableOfContents>
+<ul>
+<li><a href=#information>Information</a></li>
+<li><a href=#problem-statement>Problem Statement</a></li>
+<li><a href=#goals>Goals</a></li>
+<li><a href=#proposed-solution>Proposed Solution</a>
+<ul>
+<li><a href=#rename-the-checkers>Rename the checkers</a></li>
+<li><a href=#methods-of-stdunique_ptr-not-covered-yet>Methods of <code>std::unique_ptr</code> not covered yet</a></li>
+</ul>
+</li>
+<li><a href=#todos-and-fixmes-in-smartptrmodelling>TODO’s and FIXME’s in <code>SmartPtrModelling</code></a></li>
+</ul>
+</nav>
+</aside>
+</header>
+<article class=markdown><h1 id=proposal-for-making-smart-pointer-checkers-default-checkers-in-the-static-analyzer>
+Proposal for &ldquo;Making Smart Pointer Checkers default checkers in the Static Analyzer&rdquo;
+<a class=anchor href=#proposal-for-making-smart-pointer-checkers-default-checkers-in-the-static-analyzer>#</a>
+</h1>
+<h2 id=information>
+Information
+<a class=anchor href=#information>#</a>
+</h2>
+<ul>
+<li><strong>Name</strong>: Deep Majumder</li>
+<li><strong>Email</strong>: <a href=mailto:deep.majumder2019@gmail.com>deep.majumder2019@gmail.com</a></li>
+</ul>
+<h2 id=problem-statement>
+Problem Statement
+<a class=anchor href=#problem-statement>#</a>
+</h2>
+<p>The Clang Static Analyzer contains a <code>SmartPtrChecker</code> for catching null smart pointer dereference bugs. The data it uses to figure out such cases comes from the <code>SmartPtrModelling</code> checker, which models how a smart pointer behaves. This way, the Static Analyzer can find these bugs without accessing the source code for C++ standard library smart pointers.</p>
+<p>However, as of now, <code>std::unique_ptr</code> has been modelled in the <code>SmartPtrModelling</code> (mostly). This leaves us with the following other standard smart pointers:</p>
+<ol>
+<li><code>std::shared_ptr</code></li>
+<li><code>std::weak_ptr</code></li>
+</ol>
+<p>I intend to <strong>enhance</strong> and <strong>complete</strong> the <code>SmartPtrModelling</code> and <code>SmartPtrChecker</code> so that it is ready to move from being an experimental checker to a <code>default checker</code>. To this end I will:</p>
+<ol>
+<li>Remove TODO’s and FIXME’s in <code>std::unique_ptr</code> as well as cover unimplemented methods.</li>
+<li>Model <code>std::shared_ptr</code> and <code>std::weak_ptr</code> and cover as many possible methods.</li>
+</ol>
+<p>As examples of new bugs which will be covered by this project, please see <strong>Example 1</strong> and <strong>Example 2</strong>.</p>
+<p><strong>Example 1: <code>std::shared_ptr</code> constructed null</strong></p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>A</span> {
+    <span style=color:#66d9ef>int</span> field;
+    <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>foo</span>() { std<span style=color:#f92672>::</span>cout <span style=color:#f92672>&lt;&lt;</span> <span style=color:#e6db74>&#34;Field: &#34;</span> <span style=color:#f92672>&lt;&lt;</span> field <span style=color:#f92672>&lt;&lt;</span> <span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#34;</span>; }
+    A(<span style=color:#66d9ef>int</span> f <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>) <span style=color:#f92672>:</span> field{f} {}
+};
+
+<span style=color:#66d9ef>void</span> <span style=color:#a6e22e>deref_bad</span>(std<span style=color:#f92672>::</span>shared_ptr<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span> AS) {
+    AS<span style=color:#f92672>-&gt;</span>foo(); <span style=color:#75715e>// Yikes! Null deref here
+</span><span style=color:#75715e></span>}
+
+<span style=color:#66d9ef>void</span> <span style=color:#a6e22e>maker</span>() {
+    std<span style=color:#f92672>::</span>shared_ptr<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span> AS;
+    deref_bad(AS);
+}
+</code></pre></div><p><strong>Example 2: <code>std::weak_ptr</code> used after <code>std::shared_ptr</code> it referred to is destructed</strong></p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#66d9ef>struct</span> <span style=color:#a6e22e>A</span> {
+  <span style=color:#66d9ef>int</span> field;
+  <span style=color:#66d9ef>void</span> <span style=color:#a6e22e>foo</span>() { std<span style=color:#f92672>::</span>cout <span style=color:#f92672>&lt;&lt;</span> <span style=color:#e6db74>&#34;Field: &#34;</span> <span style=color:#f92672>&lt;&lt;</span> field <span style=color:#f92672>&lt;&lt;</span> <span style=color:#e6db74>&#34;</span><span style=color:#ae81ff>\n</span><span style=color:#e6db74>&#34;</span>; }
+  A(<span style=color:#66d9ef>int</span> f <span style=color:#f92672>=</span> <span style=color:#ae81ff>0</span>) <span style=color:#f92672>:</span> field{f} {}
+};
+
+<span style=color:#66d9ef>void</span> <span style=color:#a6e22e>mess</span>() {
+  std<span style=color:#f92672>::</span>weak_ptr<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span> A_Weak;
+  {
+	std<span style=color:#f92672>::</span>shared_ptr<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span> A_Shared <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>make_shared<span style=color:#f92672>&lt;</span>A<span style=color:#f92672>&gt;</span>(<span style=color:#ae81ff>100</span>);
+	A_Weak <span style=color:#f92672>=</span> A_Shared;
+  } <span style=color:#75715e>// A_Shared is dropped here
+</span><span style=color:#75715e></span>  <span style=color:#66d9ef>auto</span> trouble <span style=color:#f92672>=</span> A_Weak.lock(); <span style=color:#75715e>// trouble is a null shared_ptr
+</span><span style=color:#75715e></span>  trouble<span style=color:#f92672>-&gt;</span>foo(); <span style=color:#75715e>// Oops! Now that&#39;s trouble
+</span><span style=color:#75715e></span>}
+</code></pre></div><h2 id=goals>
+Goals
+<a class=anchor href=#goals>#</a>
+</h2>
+<p>At the end of this project:</p>
+<ol>
+<li>The checker for <code>std::unique_ptr</code> dereferences should be in the default checkers list</li>
+<li>There should be an alpha checker for checking of <code>std::shared_ptr</code> and <code>std::weak_ptr</code></li>
+</ol>
+<p>Thus, the user will have a stable checker for checking null <code>std::unique_ptr</code> dereferences. I hope that this checker will be enabled by default.</p>
+<h2 id=proposed-solution>
+Proposed Solution
+<a class=anchor href=#proposed-solution>#</a>
+</h2>
+<h3 id=rename-the-checkers>
+Rename the checkers
+<a class=anchor href=#rename-the-checkers>#</a>
+</h3>
+<p><code>SmartPtrModelling</code> should be renamed to something more reflective, like <em>UniquePtrModelling</em>.</p>
+<p><em>SmartPtrChecker</em> will continue to have the same name, but only <code>std::unique_ptr</code> will be covered by default in the default section of checkers. For <code>shared_ptr</code>, there will be <em>SharedPtrModellling</em> and for <code>weak_ptr</code> there will be <em>WeakPtrModellling</em>. There will be an inter-checker api for connecting the two. I would try to bring <em>SharedPtrModelling</em> to default as well, but <em>WeakPtrChecker</em> would definitely be in the alpha checkers group.</p>
+<h3 id=methods-of-stdunique_ptr-not-covered-yet>
+Methods of <code>std::unique_ptr</code> not covered yet
+<a class=anchor href=#methods-of-stdunique_ptr-not-covered-yet>#</a>
+</h3>
+<p>From the <a href="https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit#heading=h.5mykosj4yack">report</a> of the last year’s GSoC project “Find null smart pointer dereferences with the Static Analyzer”, the following methods are yet to be modelled:</p>
+<ul>
+<li><code>std::make_unique</code></li>
+<li><code>std::make_unique_for_overwrite</code></li>
+<li>Destructor</li>
+<li><code>std::swap</code></li>
+<li>comparison operators</li>
+</ul>
+<p>I intend to complete all of these. These will build on the existing methods in <code>SmartPtrModelling</code>.</p>
+<h2 id=todos-and-fixmes-in-smartptrmodelling>
+TODO’s and FIXME’s in <code>SmartPtrModelling</code>
+<a class=anchor href=#todos-and-fixmes-in-smartptrmodelling>#</a>
+</h2>
+<p>The following table is a list of such flags (as of now) in <code>SmartPtrModelling.cpp</code>:</p>
+<table>
+<thead>
+<tr>
+<th style=text-align:center>Sl. No.</th>
+<th style=text-align:center>Line number</th>
+<th style=text-align:center>Type</th>
+<th style=text-align:left>Comment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style=text-align:center>1</td>
+<td style=text-align:center>170</td>
+<td style=text-align:center>TODO</td>
+<td style=text-align:left>Update CallDescription to support anonymous calls</td>
+</tr>
+<tr>
+<td style=text-align:center>2</td>
+<td style=text-align:center>171</td>
+<td style=text-align:center>TODO</td>
+<td style=text-align:left>Handle other methods, such as .get() or .release(). But once we do, we&rsquo;d need a visitor to explain null dereferences that are found via such modeling.</td>
+</tr>
+<tr>
+<td style=text-align:center>3</td>
+<td style=text-align:center>191</td>
+<td style=text-align:center>FIXME</td>
+<td style=text-align:left>Once we model std::move for smart pointers clean up this and use that modeling.</td>
+</tr>
+<tr>
+<td style=text-align:center>4</td>
+<td style=text-align:center>197</td>
+<td style=text-align:center>TODO</td>
+<td style=text-align:left>Model this case as well. At least, avoid invalidation of globals.</td>
+</tr>
+<tr>
+<td style=text-align:center>5</td>
+<td style=text-align:center>202</td>
+<td style=text-align:center>TODO</td>
+<td style=text-align:left>Add a note to bug reports describing this decision.</td>
+</tr>
+<tr>
+<td style=text-align:center>6</td>
+<td style=text-align:center>359</td>
+<td style=text-align:center>TODO</td>
+<td style=text-align:left>Make sure to invalidate the region in the Store if we don&rsquo;t have time to model all methods.</td>
+</tr>
+<tr>
+<td style=text-align:center>7</td>
+<td style=text-align:center>394</td>
+<td style=text-align:center>TODO</td>
+<td style=text-align:left>Add support to enable MallocChecker to start tracking the raw pointer.</td>
+</tr>
+<tr>
+<td style=text-align:center>8</td>
+<td style=text-align:center>460</td>
+<td style=text-align:center>TODO</td>
+<td style=text-align:left>Add NoteTag, for how the raw pointer got using &lsquo;get&rsquo; method.</td>
+</tr>
+</tbody>
+</table>
+<p>I am currently working on item <strong>7</strong> (<a href=https://reviews.llvm.org/D98726>D98726</a>) and item <strong>8</strong> (<a href=https://reviews.llvm.org/D97183>D97183</a>) of the above table. Not all of these TODO’s are problematic and some of them are enhancements rather than potential corners. I would prioritize removing the most important ones first.</p>
+</article>
+<footer class=book-footer>
+<div class="flex flex-wrap justify-between">
+</div>
+<script>(function(){function a(c){const a=window.getSelection(),b=document.createRange();b.selectNodeContents(c),a.removeAllRanges(),a.addRange(b)}document.querySelectorAll("pre code").forEach(b=>{b.addEventListener("click",function(c){a(b.parentElement),navigator.clipboard&&navigator.clipboard.writeText(b.parentElement.textContent)})})})()</script>
+</footer>
+<div class=book-comments>
+</div>
+<label for=menu-control class="hidden book-menu-overlay"></label>
+</div>
+<aside class=book-toc>
+<div class=book-toc-content>
+<nav id=TableOfContents>
+<ul>
+<li><a href=#information>Information</a></li>
+<li><a href=#problem-statement>Problem Statement</a></li>
+<li><a href=#goals>Goals</a></li>
+<li><a href=#proposed-solution>Proposed Solution</a>
+<ul>
+<li><a href=#rename-the-checkers>Rename the checkers</a></li>
+<li><a href=#methods-of-stdunique_ptr-not-covered-yet>Methods of <code>std::unique_ptr</code> not covered yet</a></li>
+</ul>
+</li>
+<li><a href=#todos-and-fixmes-in-smartptrmodelling>TODO’s and FIXME’s in <code>SmartPtrModelling</code></a></li>
+</ul>
+</nav>
+</div>
+</aside>
+</main>
+</body>
+</html>
