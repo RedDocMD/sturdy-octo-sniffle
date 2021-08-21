@@ -6,6 +6,13 @@ draft: false
 
 # Making Smart Pointer Checkers default checkers in the Static Analyzer
 
+## Information
+
+- **Name**: Deep Majumder
+- **Email**: deep.majumder2019@gmail.com
+- **Mentors**: [Artem Dergachev](https://www.linkedin.com/in/artem-dergachev-25bb8196/), [Valeriy Savchenko](https://www.linkedin.com/in/valeriy-savchenko-a4b06749/?originalSubdomain=ru), [Gábor Horváth](https://www.linkedin.com/in/g%C3%A1bor-horv%C3%A1th-80632a77/?originalSubdomain=ca), [Raphael Isemann](https://teemperor.de/)
+- **Patches**: On [Github](https://github.com/search?q=repo%3Allvm%2Fllvm-project+author%3ARedDocMD+author-date%3A2021-05-17..2021-08-23) (if this link is broken, please use the following search term on Github: `repo:llvm/llvm-project author:RedDocMD author-date:2021-05-17..2021-08-23`)
+
 ## Overview 
 This project aims to complete the `SmartPtrChecker` and thus `SmartPtrModeling` checkers to detect null-dereferences of the `std::unique_ptr`. This is a continuation of the GSoC 2020 [project](https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit) in the same area.
 
