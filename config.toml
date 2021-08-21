@@ -6,3 +6,4 @@ theme = 'book'
 [params]
 BookTheme = 'light'
 BookSearch = false
+BookLogo = '/gsoc.png'
