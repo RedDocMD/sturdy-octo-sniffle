@@ -1,9 +1,10 @@
-<h1 style="text-align: center">Making Smart Pointer Checkers default checkers in the Static Analyzer</h1>
+---
+title: "Final Report"
+date: 2021-08-21T10:45:00+05:30
+draft: false
+---
 
-<h2 style="text-align: center; color: #a2a6ab">Final Report: Google Summer of Code 2021</h2>
-
-<h4 style="text-align: center">Deep Majumder</h4>
-<h4 style="text-align: center">deep.majumder2019@gmail.com</h4>
+# Making Smart Pointer Checkers default checkers in the Static Analyzer
 
 ## Overview 
 This project aims to complete the `SmartPtrChecker` and thus `SmartPtrModeling` checkers to detect null-dereferences of the `std::unique_ptr`. This is a continuation of the GSoC 2020 [project](https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit) in the same area.
@@ -35,7 +36,7 @@ Without [D105821](https://reviews.llvm.org/D105821), this used to have **no** le
 
 [D104300](https://reviews.llvm.org/D104300) models the `std::swap` specialization for `std::unique_ptr`. There is an existing `swap` method on `std::unique_ptr`, which performs roughly the same thing. Thus, the common code is refactored out and both methods are handled exactly the same way.
 
-![std-swap](assets/std-swap.png)
+![std-swap](/sturdy-octo-sniffle/std-swap.png)
 
 
 ### Model `<<` operator specialization for `std::unique_ptr`
@@ -109,7 +110,7 @@ We have two sources of test projects to run:- [projects](https://github.com/llvm
 
 - On running with `SmartPtrChecker` enabled and disabled, about **90** null smart pointer dereference warnings are emitted (including 3 out the 4 mentioned in previous year's report, the fourth was not emitted due to the code being removed). *There are still some false positives*. These will be areas to look at before declaring that we have a stable checker.
 
-![WebkitBug](assets/new-webkit.png)
+![WebkitBug](/sturdy-octo-sniffle/new-webkit.png)
 
 ## Future Work
 
