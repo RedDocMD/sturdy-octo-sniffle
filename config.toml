@@ -2,3 +2,7 @@ baseURL = 'https://reddocmd.github.io/sturdy-octo-sniffle'
 languageCode = 'en-us'
 title = 'Google Summer of Code 2021'
 theme = 'book'
+
+[params]
+BookTheme = 'light'
+BookSearch = false

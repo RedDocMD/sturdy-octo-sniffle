@@ -1,6 +1,6 @@
 ---
 title: "Final Report"
-weight: 1
+weight: 2
 # bookFlatSection: false
 # bookToc: true
 # bookHidden: false
@@ -144,7 +144,7 @@ The problem is that `foo(Q)` creates a state split. But CSA uses the state split
 
 - **Enable the checker by default**: Once the previous two tasks are done and the remaining bugs uncovered by WebKit fixed, we can make it a default checker. 😃
 
-- **Model `std::shared_ptr` and `std::weak_ptr`**: These two can be modelled in a manner similar to `std::unique_ptr`, ie, with the `TrackedRegionMap`. In addition, these smart pointers need a *ref count* to be stored in the GDM. A discussion on how to do this can be found in my GSoC [proposal](https://docs.google.com/document/d/1DlU7Whg33qAp3wHBdAcGvl8VE2gfslaGBc-GRb_CNjk/edit?usp=sharing).
+- **Model `std::shared_ptr` and `std::weak_ptr`**: These two can be modelled in a manner similar to `std::unique_ptr`, ie, with the `TrackedRegionMap`. In addition, these smart pointers need a *ref count* to be stored in the GDM. A discussion on how to do this can be found in my GSoC [proposal](/sturdy-octo-sniffle/docs/proposal/#solution-track-the-raw-pointer-and-ref-count-that).
 
 ## Running the code
 
