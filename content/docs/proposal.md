@@ -229,3 +229,43 @@ A `weak_ptr` can be null when:
 
 Both the cases can be obtained from the information stored for the `shared_ptr` in the GDM.
 To store the correspondence between `weak_ptr` and the underlying `shared_ptr`, we need another map in the GDM, ***WeakPtrRegionMap***. It maps from `MemRegion` of `weak_ptr` to `MemRegion` of `shared_ptr`.
+
+## Estimated Timeline
+
+My exams (and semester) ends by mid-April and so I am basically free after that. I would like to continue working on plugging TODO’s in `SmartPtrModelling`. This would give me a good picture of how the checker exactly works and also about bug-reports and visitors (it has already come up in [D97183](https://reviews.llvm.org/D97183)).
+The rest of it is detailed in the following table. I probably have set the timelines and targets ambitiously. But I think it is a good idea to keep myself under a hard target to be more productive.
+
+|                    Time                    |                                                                                           Task                                                                                           |
+|:------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Till May 17                                | Complete currently open reviews                                                                                                                                                          |
+| May 17 - June 7 (Community bonding period) | Cover methods of std::unique_ptr that have not been covered.                                                                                                                             |
+| June 7 - June 30                           | Cover all the FIXME’s and the critical TODO’s from Table 1                                                                                                                               |
+| July 1 - July 7                            | Rename checkers. Iron out bugs from the previous two stages if any.                                                                                                                      |
+| July 8 - July 15                           | Run with new checkers on some large code-bases. Remove any false positives at this stage (there probably won’t be any)                                                                   |
+| July 16 - July 31                          | Come up with the first draft of shared_ptr modelling (constructor and destructor handling, some of the methods) - should be able to handle simple and obvious bugs. Mark others as TODO. |
+| August 1 - August 15                       | Handle weak_ptr. It should correctly use the data of the underlying shared_ptr to find dereference bugs. Ample test cases must be provided.                                              |
+| August 16 - August 23                      | Write final report, finish up (I am not keeping plans of code here)                                                                                                                      |
+
+## Bio
+
+I am a sophomore majoring in Computer Science and Engineering from Indian Institute of Technology, Kharagpur. I got interested in compilers when I learnt Rust - a language that eliminated almost all of memory errors by statically enforcing lifetimes - such is the power of a well written compiler. I learnt about compilers from the MIT OCW course [6.035](https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-035-computer-language-engineering-spring-2010/) and the book “Engineering a Compiler; Cooper, Keith; Torczon, Linda; 2nd Edition”. I wrote a simple non-optimizing compiler for the educational language Decaf. (Code on [Github](https://github.com/RedDocMD/DecafCompiler)). Subsequently,
+I learnt about the LLVM project. I was already using Clang as my C/C++ compiler, but from a few YouTube talks, I learnt about all the other amazing things that you can do with the Clang AST/CFG (libtooling in general). That’s when I decided that I wanted to learn more about the Clang project. This is how I came to learn about the Static Analyzer project and became a complete fan of it, because it can find some of those annoying memory bugs (among others) that had already been shot down by the Rust compiler for Rust (admittedly the model is quite different and the aims are different as well, but it is still exciting that so much can be done on C++ with the right compiler tooling).
+
+I began working on small patches regarding the Static Analyzer this year and began communicating on cfe-dev and llvm-dev. It was a true learning experience, especially from the critical feedback I received on Phabricator. I was really delighted by the frequency and quality of feedback that I received and that gave me confidence to try for a GSoC project on the Clang Static Analyzer. 
+
+Of course, even after this project, I would still like to keep working on the Static Analyzer and perhaps even other parts of LLVM as my knowledge of computers, architectures, operating systems and compilers increases.
+
+Here is my Github [profile](https://github.com/RedDocMD).
+
+Here is my Phabricator [profile](https://reviews.llvm.org/p/RedDocMD/).
+
+The following patches have landed:
+
+- [D95846: Updated comments to reflect D85817](https://reviews.llvm.org/D95846)
+- [D95877: Fix static_cast on pointer-to-member handling](https://reviews.llvm.org/D95877)
+
+The following patches are in progress:
+
+- [D98726: Enabling MallocChecker to take up after SmartPtrModelling](https://reviews.llvm.org/D98726)
+- [D96976: Fix reinterpret_cast handling for pointer-to-member](https://reviews.llvm.org/D96976)
+- [D97183: Add NoteTag for smart-ptr get()](https://reviews.llvm.org/D97183)
