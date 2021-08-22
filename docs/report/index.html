@@ -52,6 +52,7 @@
 <li><a href=#information>Information</a></li>
 <li><a href=#overview>Overview</a></li>
 <li><a href=#description>Description</a></li>
+<li><a href=#motivation>Motivation</a></li>
 <li><a href=#revisions>Revisions</a>
 <ul>
 <li><a href=#model-comparision-methods-of-stdunique_ptr>Model comparision methods of <code>std::unique_ptr</code></a></li>
@@ -61,6 +62,13 @@
 <li><a href=#fix-for-faulty-namespace-test-and-add-flag-checking>Fix for faulty namespace test and add flag checking</a></li>
 <li><a href=#add-option-to-satestpy-for-extra-checkers>Add option to <code>SATest.py</code> for extra checkers</a></li>
 <li><a href=#model-destructor-for-stdunique_ptr>Model destructor for <code>std::unique_ptr</code></a></li>
+</ul>
+</li>
+<li><a href=#abandonedincomplete-revisions>Abandoned/Incomplete Revisions</a>
+<ul>
+<li><a href=#allow-visitors-to-run-callbacks-on-completion>Allow visitors to run callbacks on completion</a></li>
+<li><a href=#enabling-mallocchecker-to-take-up-after-smartptrmodelling>Enabling MallocChecker to take up after SmartPtrModelling</a></li>
+<li><a href=#add-notetag-for-smart-ptr-get>Add NoteTag for smart-ptr get()</a></li>
 </ul>
 </li>
 <li><a href=#results>Results</a>
@@ -95,32 +103,54 @@ Overview
 <a class=anchor href=#overview>#</a>
 </h2>
 <p>This project aims to complete the <code>SmartPtrChecker</code> and thus <code>SmartPtrModeling</code> checkers to detect null-dereferences of the <code>std::unique_ptr</code>. This is a continuation of the GSoC 2020 <a href=https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit>project</a> in the same area.</p>
+<p><em>This project was not on the original list of suggested projects</em>. It came out of a discussion with Artem Dergachev.</p>
 <h2 id=description>
 Description
 <a class=anchor href=#description>#</a>
 </h2>
 <p><code>SmartPtrChecker</code> used to be a checker in the Clang Static Analyzer for detecting &ldquo;simple&rdquo; null dereferences. The GSoC 2020 project improved upon this to provide the <code>SmartPtrModeling</code> checker, which models many of the important operations on <code>std::unique_ptr</code>, such as move, reset, release, convert to bool, etc. This project completes most of the gaps and uncompleted areas in the modelling, including the ubiquitous <code>std::make_unique</code> function and the destructor (which communicates with the <code>MallocChecker</code> to remove false positives). <em>Currently, we are a few bug fixes and some polishing away from making this a default checker</em> (as of Clang 13, it is an alpha checker).</p>
-<h2 id=revisions>
-Revisions
-<a class=anchor href=#revisions>#</a>
+<h2 id=motivation>
+Motivation
+<a class=anchor href=#motivation>#</a>
 </h2>
-<p>One aim of this project was to make sure that no method defined on <code>std::unique_ptr</code> is left un-modelled. If we don&rsquo;t, CSA either does:</p>
+<p>The major motivation behind this project was the fact that although we had a useful checker, we couldn&rsquo;t use it fully because it was only partially modelling <code>std::unique_ptr</code>. Thus, one aim of this project was to make sure that no method defined on <code>std::unique_ptr</code> is left un-modelled. If we don&rsquo;t, CSA either does:</p>
 <ul>
-<li><em>Conservative evaluation</em>, which leads to loss of information and possibly warnings being suppressed</li>
-<li><em>Inlining</em>, which sometimes leads the CSA to falsely believe that there is a bug in the standard library code (because we have modelled parts of it and are inlining other parts). Since bugs in standard library code are normally suppressed, this leads to other bugs beings suppressed (false-negatives). For example:</li>
+<li>
+<p><em>Conservative evaluation</em>, which leads to loss of information and possibly warnings being suppressed. Conservative evaluation uses the signature of the function (which is always available) to conclude what symbols might that function affect. This includes globals, parameters and other symbols <em>reachable</em> from it. Since we do not know how the function might have affected them (since we don&rsquo;t have the definition, which lead to the conservative evaluation in the first place), we are forced to <em>invalidate</em> some of the information we have about those symbols (eg, the null-ness of a smart pointer).</p>
+</li>
+<li>
+<p><em>Inlining</em>, which sometimes leads the CSA to falsely believe that there is a bug in the standard library code (because we have modelled parts of it and are inlining other parts). Since bugs in standard library code are normally suppressed, this leads to other bugs beings suppressed (false-negatives). For example:</p>
+</li>
 </ul>
 <div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#66d9ef>void</span> <span style=color:#a6e22e>foo</span>() {
     <span style=color:#66d9ef>auto</span> smart <span style=color:#f92672>=</span> std<span style=color:#f92672>::</span>unique_ptr<span style=color:#f92672>&lt;</span><span style=color:#66d9ef>int</span><span style=color:#f92672>&gt;</span>(<span style=color:#66d9ef>new</span> <span style=color:#66d9ef>int</span>(<span style=color:#ae81ff>13</span>));
     <span style=color:#66d9ef>auto</span> raw <span style=color:#f92672>=</span> <span style=color:#66d9ef>new</span> <span style=color:#66d9ef>int</span>(<span style=color:#ae81ff>29</span>);
     <span style=color:#75715e>// There is a leak here.
 </span><span style=color:#75715e></span>}
-</code></pre></div><p>Without <a href=https://reviews.llvm.org/D105821>D105821</a>, this used to have <strong>no</strong> leak warning. The inlining of the destructor of <code>std::unique_ptr</code> led the CSA to falsely believe there was a bug in the destructor code.</p>
+</code></pre></div><p>Without <a href=https://reviews.llvm.org/D105821>D105821</a>, this used to have <strong>no</strong> leak warning. The inlining of the destructor of <code>std::unique_ptr</code> led the CSA to falsely believe there was a bug in the destructor code. This happens because the destructor code, roughly speaking, calls delete on the pointer stored inside the smart pointer. But since we modelled the constructor and thus never saw the initialization of fields, the CSA believes that we are actually trying to delete an <em>un-initialized</em> variable (with possibly garbage value).</p>
+<p>Moral of the story: <em>Don&rsquo;t leave the CSA in an inconsistent State</em> (sic)</p>
+<h2 id=revisions>
+Revisions
+<a class=anchor href=#revisions>#</a>
+</h2>
 <h3 id=model-comparision-methods-of-stdunique_ptr>
 Model comparision methods of <code>std::unique_ptr</code>
 <a class=anchor href=#model-comparision-methods-of-stdunique_ptr>#</a>
 </h3>
-<p><a href=https://reviews.llvm.org/D104616>D104616</a> introduces modelling of comparision operator overloads of <code>std::unique_ptr</code>. It leverages the <code>SValBuilder::evalBinOp</code> to evaluate the result of the operator. More importantly, it attempts to perform a <strong>state-split</strong> if it is possible.</p>
-<h3 id=model-stdswap-specialization-for-stdunique_ptr>
+<p><a href=https://reviews.llvm.org/D104616>D104616</a> introduces modelling of comparision operator overloads of <code>std::unique_ptr</code>. It leverages the <code>SValBuilder::evalBinOp</code> to evaluate the result of the operator. More importantly, it attempts to perform a <strong>state-split</strong> if it is sensible, ie, we do not have enough information to conclude about the result of the operator and thus try both.</p>
+<p>For example:</p>
+<div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-cpp data-lang=cpp><span style=color:#66d9ef>void</span> <span style=color:#a6e22e>foo</span>(std<span style=color:#f92672>::</span>unique_ptr<span style=color:#f92672>&lt;</span>Apple<span style=color:#f92672>&gt;</span> ptr) {
+    std<span style=color:#f92672>::</span>unique_ptr<span style=color:#f92672>&lt;</span>Apple<span style=color:#f92672>&gt;</span> rotten; <span style=color:#75715e>// This is a null pointer
+</span><span style=color:#75715e></span>    <span style=color:#66d9ef>if</span> (ptr <span style=color:#f92672>&lt;</span> rotten) {
+        <span style=color:#75715e>// This will never be reachable, 
+</span><span style=color:#75715e></span>        <span style=color:#75715e>// since ptr.get() &gt;= 0 while rotten.get() == 0
+</span><span style=color:#75715e></span>        rotten<span style=color:#f92672>-&gt;</span>tomatoes();
+        <span style=color:#75715e>// So, although this is potentially a null dereference, 
+</span><span style=color:#75715e></span>        <span style=color:#75715e>// it is impossible to reach
+</span><span style=color:#75715e></span>        <span style=color:#75715e>// Hence, we have no warning!
+</span><span style=color:#75715e></span>    }
+} 
+</code></pre></div><h3 id=model-stdswap-specialization-for-stdunique_ptr>
 Model <code>std::swap</code> specialization for <code>std::unique_ptr</code>
 <a class=anchor href=#model-stdswap-specialization-for-stdunique_ptr>#</a>
 </h3>
@@ -145,7 +175,8 @@ Fix for faulty namespace test and add flag checking
 Add option to <code>SATest.py</code> for extra checkers
 <a class=anchor href=#add-option-to-satestpy-for-extra-checkers>#</a>
 </h3>
-<p><a href=https://reviews.llvm.org/D106739>D106739</a> augments the functionality of the <code>SATest.py</code> script. This script runs the CSA on the projects in the <code>clang/utils/analyzer/projects</code> directory (via a Docker image). By default, the script runs the CSA with only default checkers enabled. This patch adds a flag to enable extra checkers (for our case, the <code>SmartPtrChecker</code>), enabling us to conveniently run test our patches.</p>
+<p><a href=https://reviews.llvm.org/D106739>D106739</a> augments the functionality of the <code>SATest.py</code> script. This script runs the CSA on the projects in the <code>clang/utils/analyzer/projects</code> directory (via a Docker image). This script is a really important evaluation tool, because, while it is too expensive to run the CSA on real projects as a part of the CI pipeline, we still want to be able to do that manually. The second neat feature of <code>SATest.py</code> is that it can have a <em>reference</em> run, which can be compared against in subsequent runs on other patch-sets.</p>
+<p>By default, the script runs the CSA with only default checkers enabled. This patch adds a flag to enable extra checkers (for our case, the <code>SmartPtrChecker</code>), enabling us to conveniently run test our patches.</p>
 <h3 id=model-destructor-for-stdunique_ptr>
 Model destructor for <code>std::unique_ptr</code>
 <a class=anchor href=#model-destructor-for-stdunique_ptr>#</a>
@@ -174,6 +205,25 @@ Model destructor for <code>std::unique_ptr</code>
 }
 </code></pre></div><p>In this code, <code>LameVector</code> contains an inner pointer, which is freed in its destructor. If we do not invalidate this inner pointer, CSA will think <code>LameVector</code> and hence <code>ptr</code> leaks memory.</p>
 <p>This is a stop gap measure and it seems to work for the time being. The proper solution is to inline both the member constructor (both during constructor calls and during <code>make_unique</code>) and the member destructor. But we don&rsquo;t yet have a mechanism to &ldquo;evaluate&rdquo; functions from a checker.</p>
+<h2 id=abandonedincomplete-revisions>
+Abandoned/Incomplete Revisions
+<a class=anchor href=#abandonedincomplete-revisions>#</a>
+</h2>
+<h3 id=allow-visitors-to-run-callbacks-on-completion>
+Allow visitors to run callbacks on completion
+<a class=anchor href=#allow-visitors-to-run-callbacks-on-completion>#</a>
+</h3>
+<p><a href=https://reviews.llvm.org/D103434>D103434</a> was abandoned in favour of a complete overhaul of the checker visitor system. The patches for the same were developed by Valeriy Savchenko.</p>
+<h3 id=enabling-mallocchecker-to-take-up-after-smartptrmodelling>
+Enabling MallocChecker to take up after SmartPtrModelling
+<a class=anchor href=#enabling-mallocchecker-to-take-up-after-smartptrmodelling>#</a>
+</h3>
+<p><a href=https://reviews.llvm.org/D98726>D98726</a> was abandoned because we later realized that the <code>MallocChecker</code> just needed to be invoked as a part of destructor (and thus <code>reset()</code>) modelling. Currently, the code we intend to use for this feature lies in <a href=https://reviews.llvm.org/D105821>D105821</a> and would probably be separated out into its own patch, as discussed previously.</p>
+<h3 id=add-notetag-for-smart-ptr-get>
+Add NoteTag for smart-ptr get()
+<a class=anchor href=#add-notetag-for-smart-ptr-get>#</a>
+</h3>
+<p><a href=https://reviews.llvm.org/D97183>D97183</a> was never finished because the other patches were more important for the functional correctness of the checker. Moreover, although the code in this is functional, it involved too much re-invention of the wheel (duplication of functionality of <code>trackExpressionValue</code>). The new system for <code>Trackers</code> and <code>Handlers</code> created by Valeriy would be used in future to streamline and complete this patch.</p>
 <h2 id=results>
 Results
 <a class=anchor href=#results>#</a>
@@ -263,6 +313,7 @@ Acknowledgement
 <li><a href=#information>Information</a></li>
 <li><a href=#overview>Overview</a></li>
 <li><a href=#description>Description</a></li>
+<li><a href=#motivation>Motivation</a></li>
 <li><a href=#revisions>Revisions</a>
 <ul>
 <li><a href=#model-comparision-methods-of-stdunique_ptr>Model comparision methods of <code>std::unique_ptr</code></a></li>
@@ -272,6 +323,13 @@ Acknowledgement
 <li><a href=#fix-for-faulty-namespace-test-and-add-flag-checking>Fix for faulty namespace test and add flag checking</a></li>
 <li><a href=#add-option-to-satestpy-for-extra-checkers>Add option to <code>SATest.py</code> for extra checkers</a></li>
 <li><a href=#model-destructor-for-stdunique_ptr>Model destructor for <code>std::unique_ptr</code></a></li>
+</ul>
+</li>
+<li><a href=#abandonedincomplete-revisions>Abandoned/Incomplete Revisions</a>
+<ul>
+<li><a href=#allow-visitors-to-run-callbacks-on-completion>Allow visitors to run callbacks on completion</a></li>
+<li><a href=#enabling-mallocchecker-to-take-up-after-smartptrmodelling>Enabling MallocChecker to take up after SmartPtrModelling</a></li>
+<li><a href=#add-notetag-for-smart-ptr-get>Add NoteTag for smart-ptr get()</a></li>
 </ul>
 </li>
 <li><a href=#results>Results</a>
