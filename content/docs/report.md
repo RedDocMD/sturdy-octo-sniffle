@@ -49,7 +49,22 @@ Moral of the story: *Don't leave the CSA in an inconsistent State* (sic)
 
 ### Model comparision methods of `std::unique_ptr`
 
-[D104616](https://reviews.llvm.org/D104616) introduces modelling of comparision operator overloads of `std::unique_ptr`. It leverages the `SValBuilder::evalBinOp` to evaluate the result of the operator. More importantly, it attempts to perform a **state-split** if it is possible.
+[D104616](https://reviews.llvm.org/D104616) introduces modelling of comparision operator overloads of `std::unique_ptr`. It leverages the `SValBuilder::evalBinOp` to evaluate the result of the operator. More importantly, it attempts to perform a **state-split** if it is sensible, ie, we do not have enough information to conclude about the result of the operator and thus try both.
+
+For example:
+```cpp
+void foo(std::unique_ptr<Apple> ptr) {
+    std::unique_ptr<Apple> rotten; // This is a null pointer
+    if (ptr < rotten) {
+        // This will never be reachable, 
+        // since ptr.get() >= 0 while rotten.get() == 0
+        rotten->tomatoes();
+        // So, although this is potentially a null dereference, 
+        // it is impossible to reach
+        // Hence, we have no warning!
+    }
+} 
+```
 
 ### Model `std::swap` specialization for `std::unique_ptr`
 
