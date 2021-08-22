@@ -90,7 +90,9 @@ void foo(std::unique_ptr<Apple> ptr) {
 
 ### Add option to `SATest.py` for extra checkers
 
-[D106739](https://reviews.llvm.org/D106739) augments the functionality of the `SATest.py` script. This script runs the CSA on the projects in the `clang/utils/analyzer/projects` directory (via a Docker image). By default, the script runs the CSA with only default checkers enabled. This patch adds a flag to enable extra checkers (for our case, the `SmartPtrChecker`), enabling us to conveniently run test our patches.
+[D106739](https://reviews.llvm.org/D106739) augments the functionality of the `SATest.py` script. This script runs the CSA on the projects in the `clang/utils/analyzer/projects` directory (via a Docker image). This script is a really important evaluation tool, because, while it is too expensive to run the CSA on real projects as a part of the CI pipeline, we still want to be able to do that manually. The second neat feature of `SATest.py` is that it can have a *reference* run, which can be compared against in subsequent runs on other patch-sets. 
+
+By default, the script runs the CSA with only default checkers enabled. This patch adds a flag to enable extra checkers (for our case, the `SmartPtrChecker`), enabling us to conveniently run test our patches.
 
 
 ### Model destructor for `std::unique_ptr`
