@@ -19,16 +19,19 @@ weight: 2
 - **Patches**: On [Github](https://github.com/search?q=repo%3Allvm%2Fllvm-project+author%3ARedDocMD+author-date%3A2021-05-17..2021-08-23) (if this link is broken, please use the following search term on Github: `repo:llvm/llvm-project author:RedDocMD author-date:2021-05-17..2021-08-23`)
 
 ## Overview 
-This project aims to complete the `SmartPtrChecker` and thus `SmartPtrModeling` checkers to detect null-dereferences of the `std::unique_ptr`. This is a continuation of the GSoC 2020 [project](https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit) in the same area.
+This project aims to complete the `SmartPtrChecker` and thus `SmartPtrModeling` checkers to detect null-dereferences of the `std::unique_ptr`. This is a continuation of the GSoC 2020 [project](https://docs.google.com/document/d/1WZSt45kZUhg0UbOv0HXBhyEYaHrb-G-TpEhj_nU041Q/edit) in the same area. 
+
+*This project was not on the original list of suggested projects*. It came out of a discussion with Artem Dergachev.
 
 ## Description
 `SmartPtrChecker` used to be a checker in the Clang Static Analyzer for detecting "simple" null dereferences. The GSoC 2020 project improved upon this to provide the `SmartPtrModeling` checker, which models many of the important operations on `std::unique_ptr`, such as move, reset, release, convert to bool, etc. This project completes most of the gaps and uncompleted areas in the modelling, including the ubiquitous `std::make_unique` function and the destructor (which communicates with the `MallocChecker` to remove false positives). *Currently, we are a few bug fixes and some polishing away from making this a default checker* (as of Clang 13, it is an alpha checker).
 
-## Revisions
+## Motivation
 
-One aim of this project was to make sure that no method defined on `std::unique_ptr` is left un-modelled. If we don't, CSA either does:
+The major motivation behind this project was the fact that although we had a useful checker, we couldn't use it fully because it was only partially modelling `std::unique_ptr`. Thus, one aim of this project was to make sure that no method defined on `std::unique_ptr` is left un-modelled. If we don't, CSA either does:
 
-- *Conservative evaluation*, which leads to loss of information and possibly warnings being suppressed
+- *Conservative evaluation*, which leads to loss of information and possibly warnings being suppressed. Conservative evaluation uses the signature of the function (which is always available) to conclude what symbols might that function affect. This includes globals, parameters and other symbols *reachable* from it. Since we do not know how the function might have affected them (since we don't have the definition, which lead to the conservative evaluation in the first place), we are forced to *invalidate* some of the information we have about those symbols (eg, the null-ness of a smart pointer).
+
 - *Inlining*, which sometimes leads the CSA to falsely believe that there is a bug in the standard library code (because we have modelled parts of it and are inlining other parts). Since bugs in standard library code are normally suppressed, this leads to other bugs beings suppressed (false-negatives). For example:
 
 ```cpp
@@ -38,7 +41,11 @@ void foo() {
     // There is a leak here.
 }
 ```
-Without [D105821](https://reviews.llvm.org/D105821), this used to have **no** leak warning. The inlining of the destructor of `std::unique_ptr` led the CSA to falsely believe there was a bug in the destructor code.
+Without [D105821](https://reviews.llvm.org/D105821), this used to have **no** leak warning. The inlining of the destructor of `std::unique_ptr` led the CSA to falsely believe there was a bug in the destructor code. This happens because the destructor code, roughly speaking, calls delete on the pointer stored inside the smart pointer. But since we modelled the constructor and thus never saw the initialization of fields, the CSA believes that we are actually trying to delete an *un-initialized* variable (with possibly garbage value).
+
+Moral of the story: *Don't leave the CSA in an inconsistent State* (sic)
+
+## Revisions
 
 ### Model comparision methods of `std::unique_ptr`
 
@@ -102,6 +109,20 @@ void foo() {
 In this code, `LameVector` contains an inner pointer, which is freed in its destructor. If we do not invalidate this inner pointer, CSA will think `LameVector` and hence `ptr` leaks memory.
 
 This is a stop gap measure and it seems to work for the time being. The proper solution is to inline both the member constructor (both during constructor calls and during `make_unique`) and the member destructor. But we don't yet have a mechanism to "evaluate" functions from a checker.
+
+## Abandoned/Incomplete Revisions
+
+### Allow visitors to run callbacks on completion
+
+[D103434](https://reviews.llvm.org/D103434) was abandoned in favour of a complete overhaul of the checker visitor system. The patches for the same were developed by Valeriy Savchenko.
+
+### Enabling MallocChecker to take up after SmartPtrModelling
+
+[D98726](https://reviews.llvm.org/D98726) was abandoned because we later realized that the `MallocChecker` just needed to be invoked as a part of destructor (and thus `reset()`) modelling. Currently, the code we intend to use for this feature lies in [D105821](https://reviews.llvm.org/D105821) and would probably be separated out into its own patch, as discussed previously.
+
+### Add NoteTag for smart-ptr get()
+
+[D97183](https://reviews.llvm.org/D97183) was never finished because the other patches were more important for the functional correctness of the checker. Moreover, although the code in this is functional, it involved too much re-invention of the wheel (duplication of functionality of `trackExpressionValue`). The new system for `Trackers` and `Handlers` created by Valeriy would be used in future to streamline and complete this patch.
 
 ## Results
 
