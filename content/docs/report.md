@@ -194,3 +194,7 @@ To run the CSA with `SmartPtrChecker` enabled:
 ## Acknowledgement
 
 I would like to express my sincere gratitude towards my four mentors - **Artem Dergachev**, **Valeriy Savchenko**, **Gábor Horváth** and **Raphael Isemann**. They helped me tirelessly throughout the GSoC period, quickly responding to my emails, reviewing my patches and giving advice. They were available for long hours of Skype calls, at often awkward times for them (due to time zone differences). It was a fun three months of learning, coding, struggling, hacking and doing something, perhaps, meaningful.
+
+## Further updates/discussion
+
+It is available in this mail [thread](https://lists.llvm.org/pipermail/cfe-dev/2021-August/068685.html).
